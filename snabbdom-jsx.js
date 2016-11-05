@@ -101,7 +101,6 @@ function normalizeAttrs(traits, tag, attrs) {
     return map;
 
     function addAttr(namespace, key, val) {
-        console.log(namespace, key, val);
         var ns = map[namespace] || (map[namespace] = {});
         ns[key] = val;
     }
