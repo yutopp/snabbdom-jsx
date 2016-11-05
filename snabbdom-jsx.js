@@ -11,32 +11,89 @@ function isPrimitive(val) {
            val === undefined;
 }
 
-function normalizeAttrs(attrs, nsURI, defNS, modules, tag) {
-    var map = { ns: nsURI };
+function switchAttrs(tag, attrName, attrs, modules) {
+    var idx = attrName.indexOf('-');
+    if (idx != -1) {
+        let mod = attrName.slice(0, idx);
+        if (modules.indexOf(mod) != -1) {
+            let key = attrName.slice(idx+1);
+            return [mod, key, attrs[attrName]];
+        }
+    }
+
+    if (modules.indexOf(attrName) != -1) {
+        if (!isPrimitive(attrs[attrName])) {
+            return [attrName, null, attrs[attrName]];
+        } else {
+            console.warn(`ignored <${tag}> ${attrName} = ${JSON.stringify(attrs[attrName])}`);
+            return null;
+        }
+    }
+
+    return null;
+}
+
+function switchAttrsHtml(tag, attrName, attrs, modules) {
+    var v = switchAttrs(tag, attrName, attrs, modules);
+    if ( v ) { return v; }
+
+    if (isNativeTag(tag)) {
+        if (isHtmlAttribute(attrName)) {
+            return ['attrs', attrName, attrs[attrName]];
+        }
+    }
+
+    return ['props', attrName, attrs[attrName]];
+}
+
+const basicAttrs = ["accept", "acceptCharset", "accessKey", "action",
+                    "allowFullScreen", "allowTransparency", "alt", "async",
+                    "autoComplete", "autoFocus", "autoPlay", "capture",
+                    "cellPadding", "cellSpacing", "challenge", "charSet",
+                    "checked", "cite", "id", "class", "colSpan",
+                    "cols", "content", "contentEditable", "contextMenu",
+                    "controls", "coords", "crossOrigin", "data", "dateTime",
+                    "default", "defer", "dir", "disabled", "download",
+                    "draggable", "encType", "form", "formAction", "formEncType",
+                    "formMethod", "formNoValidate", "formTarget", "frameBorder",
+                    "headers", "height", "hidden", "high", "href", "hrefLang",
+                    "for", "httpEquiv", "icon", "inputMode", "integrity",
+                    "is", "keyParams", "keyType", "kind", "label", "lang", "list",
+                    "loop", "low", "manifest", "marginHeight", "marginWidth",
+                    "max", "maxLength", "media", "mediaGroup", "method", "min",
+                    "minLength", "multiple", "muted", "name", "noValidate",
+                    "nonce", "open", "optimum", "pattern", "placeholder", "poster",
+                    "preload", "profile", "radioGroup", "readOnly", "rel",
+                    "required", "reversed", "role", "rowSpan", "rows", "sandbox",
+                    "scope", "scoped", "scrolling", "seamless", "selected",
+                    "shape", "size", "sizes", "span", "spellCheck", "src",
+                    "srcDoc", "srcLang", "srcSet", "start", "step", "style",
+                    "summary", "tabIndex", "target", "title", "type", "useMap",
+                    "value", "width", "wmode", "wrap"];
+const attrs = new Set(basicAttrs);
+
+// if the tag name is lower-case, assume it is a native tag
+function isNativeTag(tag) {
+    return tag === tag.toLowerCase()
+}
+
+function isHtmlAttribute(attr) {
+    return attrs.has(attr) || (attr.indexOf("data-") === 0) || (attr.indexOf("aria-") === 0)
+}
+
+function normalizeAttrs(traits, tag, attrs) {
+    var map = { ns: traits.ns };
     for (var key in attrs) {
-        if(key !== 'key' && key !== 'classNames' && key !== 'selector' && key !== 'id') {
-            var idx = key.indexOf('-');
-            if (idx != -1) {
-                let nmod = key.slice(0, idx);
-                let nkey = key.slice(idx+1);
-                if (modules.indexOf(nmod) != -1) {
-                    addAttr(nmod, nkey, attrs[key]);
-                } else {
-                    addAttr(defNS, key, attrs[key])
-                }
+        if (key === 'key') { continue; }
+
+        var res = traits.attrSwitcher(tag, key, attrs, traits.modules);
+        if (res !== null) {
+            var [mod, attr, value] = res;
+            if (attr) {
+                addAttr(mod, attr, value)
             } else {
-                if (modules.indexOf(key) != -1) {
-                    if (!isPrimitive(attrs[key])) {
-                        let nmod = key;
-                        let nattrs = attrs[key];
-                        for (var nkey in nattrs) {
-                            addAttr(nmod, nkey, nattrs[nkey]);
-                        }
-                    } else {
-                        console.log(`ignored <${tag}> ${key} = ${JSON.stringify(attrs[key])}`);
-                    }
-                } else {
-                    addAttr(defNS, key, attrs[key]);
+                for (var nkey in value) {
+                    addAttr(mod, nkey, value[nkey]);
                 }
             }
         }
@@ -44,35 +101,22 @@ function normalizeAttrs(attrs, nsURI, defNS, modules, tag) {
     return map;
 
     function addAttr(namespace, key, val) {
+        console.log(namespace, key, val);
         var ns = map[namespace] || (map[namespace] = {});
         ns[key] = val;
     }
 }
 
-function genNewAttrs(attrHooks, attrs) {
-    var map = {};
-    for (var key in attrs) {
-        var nkey = key;
-        if (attrHooks[key]) {
-            nkey = attrHooks[key](key);
-        }
-        map[nkey] = attrs[key];
-    }
-    return map;
-}
-
-function buildFromStringTag(nsURI, defNS, modules, attrHooks, tag, attrs, children) {
-    attrs = genNewAttrs(attrHooks, attrs);
-
+function buildFromStringTag(traits, tag, attrs, children) {
     return {
         sel      : tag,
-        data     : normalizeAttrs(attrs, nsURI, defNS, modules, tag),
+        data     : normalizeAttrs(traits, tag, attrs),
         children : children.map((c) => isPrimitive(c) ? {text: c} : c),
         key      : attrs.key
     };
 }
 
-function buildFromComponent(nsURI, defNS, modules, _attrHooks, tag, attrs, children) {
+function buildFromComponent(_traits, tag, attrs, children) {
     var res;
     if (typeof tag === 'function') {
         res = tag(attrs, children);
@@ -113,82 +157,44 @@ function maybeFlatten(array) {
     return array;
 }
 
-function buildVnode(nsURI, defNS, modules, attrHooks, tag, attrs, children) {
+function buildVnode(traits, tag, attrs, children) {
     attrs = attrs || {};
     children = maybeFlatten(children);
     if(typeof tag === 'string') {
-        return buildFromStringTag(nsURI, defNS, modules, attrHooks, tag, attrs, children)
+        return buildFromStringTag(traits, tag, attrs, children)
     } else {
-        return buildFromComponent(nsURI, defNS, modules, attrHooks, tag, attrs, children)
+        return buildFromComponent(traits, tag, attrs, children)
     }
 }
 
-function JSX(nsURI, defNS, modules, attrHooks) {
-    attrHooks = attrHooks || {};
+function JSX(traits) {
     return function jsxWithCustomNS(tag, attrs, children) {
         if(arguments.length > 3 || !Array.isArray(children)) {
             children = slice.call(arguments, 2);
         }
-        return buildVnode(nsURI, defNS, modules, attrHooks, tag, attrs, children);
+        return buildVnode(traits, tag, attrs, children);
     };
 }
 
 
 
 var modulesNS = ['hook', 'on', 'style', 'props', 'attrs', 'dataset'];
-var attrHooks = {
-    'class': function (_) { return 'classNames'},
-    'for':   function (_) { return 'htmlFor' }
-};
-
-var modulesNSClsMod = ['hook', 'on', 'style', 'class', 'props', 'attrs', 'dataset'];
-
-const basicAttrs = ["accept", "acceptCharset", "accessKey", "action",
-                    "allowFullScreen", "allowTransparency", "alt", "async",
-                    "autoComplete", "autoFocus", "autoPlay", "capture",
-                    "cellPadding", "cellSpacing", "challenge", "charSet",
-                    "checked", "cite", "id", "class", "colSpan",
-                    "cols", "content", "contentEditable", "contextMenu",
-                    "controls", "coords", "crossOrigin", "data", "dateTime",
-                    "default", "defer", "dir", "disabled", "download",
-                    "draggable", "encType", "form", "formAction", "formEncType",
-                    "formMethod", "formNoValidate", "formTarget", "frameBorder",
-                    "headers", "height", "hidden", "high", "href", "hrefLang",
-                    "htmlFor", "httpEquiv", "icon", "id", "inputMode", "integrity",
-                    "is", "keyParams", "keyType", "kind", "label", "lang", "list",
-                    "loop", "low", "manifest", "marginHeight", "marginWidth",
-                    "max", "maxLength", "media", "mediaGroup", "method", "min",
-                    "minLength", "multiple", "muted", "name", "noValidate",
-                    "nonce", "open", "optimum", "pattern", "placeholder", "poster",
-                    "preload", "profile", "radioGroup", "readOnly", "rel",
-                    "required", "reversed", "role", "rowSpan", "rows", "sandbox",
-                    "scope", "scoped", "scrolling", "seamless", "selected",
-                    "shape", "size", "sizes", "span", "spellCheck", "src",
-                    "srcDoc", "srcLang", "srcSet", "start", "step", "style",
-                    "summary", "tabIndex", "target", "title", "type", "useMap",
-                    "value", "width", "wmode", "wrap"];
-const attrs = new Set(basicAttrs);
-
-// if the tag name is lower-case, assume it is a native tag
-function isNativeTag(tag) {
-    return tag === tag.toLowerCase()
-}
-
-function isAttribute(tag, attr) {
-    return isNativeTag(tag);
-}
 
 const htmlTraits = {
     ns: undefined,
+    modules: modulesNS,
+    attrSwitcher: switchAttrsHtml
 };
 
 var SVGNS = 'http://www.w3.org/2000/svg';
 const svgTraits = {
     ns: SVGNS,
+    modules: modulesNS,
+    attrSwitcher: switchAttrs
 };
 
 module.exports = {
-    html: JSX(undefined, 'props', modulesNS, attrHooks),
-    svg:  JSX(SVGNS, 'attrs', modulesNS),
+    html: JSX(htmlTraits),
+    svg:  JSX(svgTraits),
     JSX:  JSX
 };

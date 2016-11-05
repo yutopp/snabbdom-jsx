@@ -10,14 +10,14 @@ test('jsx -> html vnode 1', (assert) => {
             <label for="someid">label</label>
         </div>;
 
-    assert.equal(div1.sel, 'div.c1.c2');
+    assert.equal(div1.sel, 'div');
     assert.equal(div1.data.ns, undefined);
     assert.deepEqual(div1.children, [
         {
             sel: 'label',
             data: {
                 ns: undefined,
-                props: { htmlFor: 'someid' }
+                attrs: { 'for': 'someid' }
             },
             children: [{ text: 'label'}],
             key: undefined
@@ -41,7 +41,7 @@ test('jsx -> html vnode 1', (assert) => {
         sel: 'input',
         data: {
             ns: undefined,
-            props: { type: 'text' },
+            attrs: { type: 'text' },
             on: { click: callback },
             style: { fontWeight: 'bold', color: 'red' },
         },
@@ -49,11 +49,15 @@ test('jsx -> html vnode 1', (assert) => {
         key: 'key'
     });
 
-    const div3 = <div selector="#id.c1.c2"></div>;
+    const div3 = <div id="id" class="c1 c2"></div>;
     assert.deepEqual(div3, {
-        sel: 'div#id.c1.c2',
+        sel: 'div',
         data: {
-            ns: undefined
+            ns: undefined,
+            attrs: {
+                id: "id",
+                'class': "c1 c2"
+            }
         },
         children: [],
         key: undefined
@@ -61,10 +65,11 @@ test('jsx -> html vnode 1', (assert) => {
 
     const div4 = <div id="yo" role="aa" aria-controls="bb"></div>;
     assert.deepEqual(div4, {
-        sel: 'div#yo',
+        sel: 'div',
         data: {
             ns: undefined,
-            props: {
+            attrs: {
+                id: 'yo',
                 'aria-controls': 'bb',
                 'role': 'aa'
             },
