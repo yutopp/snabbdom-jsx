@@ -64,23 +64,6 @@ function genNewAttrs(attrHooks, attrs) {
 function buildFromStringTag(nsURI, defNS, modules, attrHooks, tag, attrs, children) {
     attrs = genNewAttrs(attrHooks, attrs);
 
-    if (attrs.selector && (attrs.classNames || attrs.id)) {
-        console.error(`${tag} has both of selector and (classNames or id)`);
-    }
-
-    if (attrs.selector) {
-        tag = tag + attrs.selector;
-    }
-    if (attrs.id) {
-        tag = tag + '#' + attrs.id;
-    }
-    if (attrs.classNames) {
-        var cns = attrs.classNames;
-        tag = tag + '.' + (
-            Array.isArray(cns) ? cns.join('.') : cns.replace(/\s+/g, '.')
-        );
-    }
-
     return {
         sel      : tag,
         data     : normalizeAttrs(attrs, nsURI, defNS, modules, tag),
@@ -150,7 +133,7 @@ function JSX(nsURI, defNS, modules, attrHooks) {
     };
 }
 
-var SVGNS = 'http://www.w3.org/2000/svg';
+
 
 var modulesNS = ['hook', 'on', 'style', 'props', 'attrs', 'dataset'];
 var attrHooks = {
@@ -160,9 +143,52 @@ var attrHooks = {
 
 var modulesNSClsMod = ['hook', 'on', 'style', 'class', 'props', 'attrs', 'dataset'];
 
+const basicAttrs = ["accept", "acceptCharset", "accessKey", "action",
+                    "allowFullScreen", "allowTransparency", "alt", "async",
+                    "autoComplete", "autoFocus", "autoPlay", "capture",
+                    "cellPadding", "cellSpacing", "challenge", "charSet",
+                    "checked", "cite", "id", "class", "colSpan",
+                    "cols", "content", "contentEditable", "contextMenu",
+                    "controls", "coords", "crossOrigin", "data", "dateTime",
+                    "default", "defer", "dir", "disabled", "download",
+                    "draggable", "encType", "form", "formAction", "formEncType",
+                    "formMethod", "formNoValidate", "formTarget", "frameBorder",
+                    "headers", "height", "hidden", "high", "href", "hrefLang",
+                    "htmlFor", "httpEquiv", "icon", "id", "inputMode", "integrity",
+                    "is", "keyParams", "keyType", "kind", "label", "lang", "list",
+                    "loop", "low", "manifest", "marginHeight", "marginWidth",
+                    "max", "maxLength", "media", "mediaGroup", "method", "min",
+                    "minLength", "multiple", "muted", "name", "noValidate",
+                    "nonce", "open", "optimum", "pattern", "placeholder", "poster",
+                    "preload", "profile", "radioGroup", "readOnly", "rel",
+                    "required", "reversed", "role", "rowSpan", "rows", "sandbox",
+                    "scope", "scoped", "scrolling", "seamless", "selected",
+                    "shape", "size", "sizes", "span", "spellCheck", "src",
+                    "srcDoc", "srcLang", "srcSet", "start", "step", "style",
+                    "summary", "tabIndex", "target", "title", "type", "useMap",
+                    "value", "width", "wmode", "wrap"];
+const attrs = new Set(basicAttrs);
+
+// if the tag name is lower-case, assume it is a native tag
+function isNativeTag(tag) {
+    return tag === tag.toLowerCase()
+}
+
+function isAttribute(tag, attr) {
+    return isNativeTag(tag);
+}
+
+const htmlTraits = {
+    ns: undefined,
+};
+
+var SVGNS = 'http://www.w3.org/2000/svg';
+const svgTraits = {
+    ns: SVGNS,
+};
+
 module.exports = {
-    html:                JSX(undefined, 'props', modulesNS, attrHooks),
-    html_with_class_mod: JSX(undefined, 'props', modulesNSClsMod),
-    svg:                 JSX(SVGNS, 'attrs', modulesNS),
-    JSX:                 JSX
+    html: JSX(undefined, 'props', modulesNS, attrHooks),
+    svg:  JSX(SVGNS, 'attrs', modulesNS),
+    JSX:  JSX
 };
