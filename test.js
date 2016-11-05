@@ -94,6 +94,22 @@ test('jsx -> html vnode 1', (assert) => {
         key: undefined,
     });
 
+    class Hook { insert(_) {} }
+    const hook = new Hook();
+    const div6 = <div hook={hook} style={{c: 'd'}}></div>;
+    assert.deepEqual(div6, {
+        sel: 'div',
+        data: {
+            ns: undefined,
+            hook: hook,
+            style: {
+                c: 'd'
+            },
+        },
+        children: [],
+        key: undefined,
+    });
+
     assert.end();
 });
 

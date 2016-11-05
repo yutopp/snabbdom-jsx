@@ -104,8 +104,13 @@ function normalizeAttrs(traits, tag, attrs) {
     }
 
     function mergeAttr(namespace, obj) {
-        var ns = map[namespace] || (map[namespace] = {});
-        Object.assign(ns, obj);
+        map[namespace] = map[namespace] || {};
+
+        if (obj.constructor.name === 'Object') {
+            Object.assign(map[namespace], obj);
+        } else {
+            map[namespace] = obj;
+        }
     }
 }
 
