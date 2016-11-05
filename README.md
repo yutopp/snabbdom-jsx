@@ -1,3 +1,4 @@
+This repository is a fork of [snabbdom-jsx](https://github.com/yelouafi/snabbdom-jsx).
 
 [![npm version](https://img.shields.io/npm/v/snabbdom-jsx.svg?style=flat-square)](https://www.npmjs.com/package/snabbdom-jsx)
 
