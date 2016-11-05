@@ -92,9 +92,7 @@ function normalizeAttrs(traits, tag, attrs) {
             if (attr) {
                 addAttr(mod, attr, value)
             } else {
-                for (var nkey in value) {
-                    addAttr(mod, nkey, value[nkey]);
-                }
+                mergeAttr(mod, value);
             }
         }
     }
@@ -103,6 +101,11 @@ function normalizeAttrs(traits, tag, attrs) {
     function addAttr(namespace, key, val) {
         var ns = map[namespace] || (map[namespace] = {});
         ns[key] = val;
+    }
+
+    function mergeAttr(namespace, obj) {
+        var ns = map[namespace] || (map[namespace] = {});
+        Object.assign(ns, obj);
     }
 }
 

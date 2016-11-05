@@ -55,7 +55,7 @@ test('jsx -> html vnode 1', (assert) => {
         data: {
             ns: undefined,
             attrs: {
-                id: "id",
+                'id': "id",
                 'class': "c1 c2"
             }
         },
@@ -69,9 +69,25 @@ test('jsx -> html vnode 1', (assert) => {
         data: {
             ns: undefined,
             attrs: {
-                id: 'yo',
+                'id': 'yo',
                 'aria-controls': 'bb',
                 'role': 'aa'
+            },
+        },
+        children: [],
+        key: undefined,
+    });
+
+    const div5 = <div hook={({a: 'b'})} style={{c: 'd'}}></div>;
+    assert.deepEqual(div5, {
+        sel: 'div',
+        data: {
+            ns: undefined,
+            hook: {
+                a: 'b'
+            },
+            style: {
+                c: 'd'
             },
         },
         children: [],
